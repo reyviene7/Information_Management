@@ -7,16 +7,20 @@ conn = sqlite3.connect('student_info.db')
 c = conn.cursor()
 
 # Create Students table
+
 c.execute('''
     CREATE TABLE IF NOT EXISTS students (
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
-        gender TEXT,
-        year_level INTEGER,
-        course_code TEXT,
+        gender TEXT NOT NULL,
+        year_level INTEGER NOT NULL,
+        course_code TEXT NOT NULL,
+        age INTEGER,
+        email TEXT,
         FOREIGN KEY (course_code) REFERENCES courses (code)
     )
 ''')
+
 
 # Create Courses table
 c.execute('''
@@ -27,12 +31,14 @@ c.execute('''
 ''')
 
 class Student:
-    def __init__(self, id, name, gender, year_level, course_code):
+    def __init__(self, id, name, gender, year_level, course_code, age, email):
         self.id = id
         self.name = name
         self.gender = gender
         self.year_level = year_level
         self.course_code = course_code
+        self.age = age
+        self.email = email
 
 class Course:
     def __init__(self, code, course):
@@ -68,31 +74,41 @@ class StudentInformationSystem:
         self.label.grid(row=2, column=0)
         self.gender_entry = tk.Entry(self.frame)
         self.gender_entry.grid(row=2, column=1)
+        
+        self.label = tk.Label(self.frame, text="Age:")
+        self.label.grid(row=3, column=0)
+        self.age_entry = tk.Entry(self.frame)
+        self.age_entry.grid(row=3, column=1)
+        
+        self.label = tk.Label(self.frame, text="Email:")
+        self.label.grid(row=4, column=0)
+        self.email_entry = tk.Entry(self.frame)
+        self.email_entry.grid(row=4, column=1)
 
         self.label = tk.Label(self.frame, text="Year Level:")
-        self.label.grid(row=3, column=0)
+        self.label.grid(row=5, column=0)
         self.year_level_entry = tk.Entry(self.frame)
-        self.year_level_entry.grid(row=3, column=1)
+        self.year_level_entry.grid(row=5, column=1)
 
         self.label = tk.Label(self.frame, text="Course Code:")
-        self.label.grid(row=4, column=0)
+        self.label.grid(row=6, column=0)
         self.course_code_entry = tk.Entry(self.frame)
-        self.course_code_entry.grid(row=4, column=1)
+        self.course_code_entry.grid(row=6, column=1)
 
         self.add_student_button = tk.Button(self.frame, text="Add Student", command=self.add_student)
-        self.add_student_button.grid(row=5, column=0, pady=15)
+        self.add_student_button.grid(row=7, column=0, pady=15)
 
         self.delete_student_button = tk.Button(self.frame, text="Delete Student", command=self.delete_student)
-        self.delete_student_button.grid(row=5, column=1, pady=15)
+        self.delete_student_button.grid(row=7, column=1, pady=15)
 
         self.edit_student_button = tk.Button(self.frame, text="Edit Student", command=self.edit_student)
-        self.edit_student_button.grid(row=6, column=0, pady=10)
+        self.edit_student_button.grid(row=8, column=0, pady=10)
 
         self.list_students_button = tk.Button(self.frame, text="List Students", command=self.list_students)
-        self.list_students_button.grid(row=6, column=1, pady=10)
+        self.list_students_button.grid(row=8, column=1, pady=10)
 
         self.search_student_button = tk.Button(self.frame, text="Search Student", command=self.search_student)
-        self.search_student_button.grid(row=7, column=0, pady=10)
+        self.search_student_button.grid(row=9, column=0, pady=10)
 
         self.label = tk.Label(self.frame, text="Course Code:")
         self.label.grid(row=0, column=2)
@@ -129,11 +145,8 @@ class StudentInformationSystem:
         gender = self.gender_entry.get()
         year_level = self.year_level_entry.get()
         course_code = self.course_code_entry.get()
-
-        # Validate the input values
-        if not id or not name or not gender or not year_level or not course_code:
-            messagebox.showwarning("Error", "Please fill in all the fields.")
-            return
+        age = self.age_entry.get()
+        email = self.email_entry.get()
 
         # Check if the course code exists
         self.c.execute("SELECT * FROM courses WHERE code = ?", (course_code,))
@@ -143,15 +156,21 @@ class StudentInformationSystem:
             messagebox.showwarning("Error", "Invalid course code. Please enter a valid course code.")
             return
 
-        # Add the student to the database
-        try:
-            self.c.execute("INSERT INTO students (id, name, gender, year_level, course_code) VALUES (?, ?, ?, ?, ?)",
-                           (id, name, gender, year_level, course_code))
+        # Validate inputs
+        if id and name and gender and year_level and course_code and age and email:
+            # Create a new Student instance
+            student = Student(id, name, gender, year_level, course_code, age, email)
+
+            # Insert the student into the database
+            self.c.execute('INSERT INTO students (id, name, gender, year_level, course_code, age, email) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                           (student.id, student.name, student.gender, student.year_level,
+                            student.course_code, student.age, student.email))
             self.conn.commit()
+
             messagebox.showinfo("Success", "Student added successfully.")
-            self.clear_fields()
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
+        else:
+            messagebox.showwarning("Error", "Please fill in all the fields.")
+
 
     def delete_student(self):
         id = self.id_entry.get()
@@ -188,7 +207,7 @@ class StudentInformationSystem:
             messagebox.showwarning("Error", "Please fill in all fields.")
 
     def list_students(self):
-        self.c.execute('SELECT students.id, students.name, students.gender, students.year_level, students.course_code, courses.course FROM students LEFT JOIN courses ON students.course_code = courses.code')
+        self.c.execute('SELECT students.id, students.name, students.gender, students.year_level, students.course_code, courses.course, age, email FROM students LEFT JOIN courses ON students.course_code = courses.code')
         students = self.c.fetchall()
         result = "List of Students:\n\n"
         for student in students:
@@ -198,6 +217,8 @@ class StudentInformationSystem:
             result += f"Year Level: {student[3]}\n"
             result += f"Course Code: {student[4]}\n"
             result += f"Course: {student[5]}\n"
+            result += f"Age: {student[6]}\n"
+            result += f"Email: {student[7]}\n"
             result += "=====================\n"
         messagebox.showinfo("Students", result)
 
@@ -205,7 +226,7 @@ class StudentInformationSystem:
         keyword = self.id_entry.get()
 
         if keyword:
-            self.c.execute('SELECT students.id, students.name, students.gender, students.year_level, students.course_code, courses.course FROM students LEFT JOIN courses ON students.course_code = courses.code WHERE students.id = ?', (keyword,))
+            self.c.execute('SELECT students.id, students.name, students.gender, students.year_level, students.course_code, courses.course, student.age, student.email FROM students LEFT JOIN courses ON students.course_code = courses.code WHERE students.id = ?', (keyword,))
             student = self.c.fetchone()
             if student:
                 result = "Search Results:\n\n"
@@ -215,6 +236,8 @@ class StudentInformationSystem:
                 result += f"Year Level: {student[3]}\n"
                 result += f"Course Code: {student[4]}\n"
                 result += f"Course: {student[5]}\n"
+                result += f"Age: {student[6]}\n"
+                result += f"Email: {student[7]}\n"
                 messagebox.showinfo("Search Results", result)
             else:
                 messagebox.showwarning("Error", "No student found with the provided ID.")
