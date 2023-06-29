@@ -1,6 +1,6 @@
 import sqlite3
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, Entry, Button
 
 # Connect to the database
 conn = sqlite3.connect('student_info.db')
@@ -15,8 +15,8 @@ c.execute('''
         gender TEXT NOT NULL,
         year_level INTEGER NOT NULL,
         course_code TEXT NOT NULL,
-        age INTEGER,
-        email TEXT,
+        age INTEGER NOT NULL,
+        email TEXT NOT NULL,
         FOREIGN KEY (course_code) REFERENCES courses (code)
     )
 ''')
@@ -106,7 +106,7 @@ class StudentInformationSystem:
 
         self.list_students_button = tk.Button(self.frame, text="List Students", command=self.list_students)
         self.list_students_button.grid(row=8, column=1, pady=10)
-
+        
         self.search_student_button = tk.Button(self.frame, text="Search Student", command=self.search_student)
         self.search_student_button.grid(row=9, column=0, pady=10)
 
@@ -226,7 +226,7 @@ class StudentInformationSystem:
         keyword = self.id_entry.get()
 
         if keyword:
-            self.c.execute('SELECT students.id, students.name, students.gender, students.year_level, students.course_code, courses.course, student.age, student.email FROM students LEFT JOIN courses ON students.course_code = courses.code WHERE students.id = ?', (keyword,))
+            self.c.execute('SELECT students.id, students.name, students.gender, students.year_level, students.course_code, courses.course, age, email FROM students LEFT JOIN courses ON students.course_code = courses.code')
             student = self.c.fetchone()
             if student:
                 result = "Search Results:\n\n"
