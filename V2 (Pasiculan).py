@@ -1,26 +1,29 @@
-import sqlite3
+import mysql.connector
 import tkinter as tk
-from tkinter import messagebox, Entry, Button
+from tkinter import messagebox
 
 # Connect to the database
-conn = sqlite3.connect('student_info.db')
+conn = mysql.connector.connect(
+    host='localhost',
+    user='root',
+    password='1234',
+    database='students_info'
+)
 c = conn.cursor()
 
 # Create Students table
-
 c.execute('''
     CREATE TABLE IF NOT EXISTS students (
-        id INTEGER PRIMARY KEY,
+        id INT PRIMARY KEY,
         name TEXT NOT NULL,
         gender TEXT NOT NULL,
-        year_level INTEGER NOT NULL,
+        year_level INT NOT NULL,
         course_code TEXT NOT NULL,
-        age INTEGER NOT NULL,
+        age INT NOT NULL,
         email TEXT NOT NULL,
         FOREIGN KEY (course_code) REFERENCES courses (code)
     )
 ''')
-
 
 # Create Courses table
 c.execute('''
@@ -47,7 +50,12 @@ class Course:
 
 class StudentInformationSystem:
     def __init__(self):
-        self.conn = sqlite3.connect('student_info.db')
+        self.conn = mysql.connector.connect(
+            host='localhost',
+            user='root',
+            password='1234',
+            database='students_info'
+        )
         self.c = self.conn.cursor()
 
         self.root = tk.Tk()
@@ -56,7 +64,7 @@ class StudentInformationSystem:
 
         self.frame = tk.Frame(self.root)
         self.frame.pack(padx=50, pady=50)
-        
+
         self.student_frame = tk.Frame(self.frame, padx=20, pady=20)  # Create a frame for the student section
         self.student_frame.grid(row=0, column=2, padx=50)  # Place the student frame in column 0
 
@@ -74,12 +82,12 @@ class StudentInformationSystem:
         self.label.grid(row=2, column=0)
         self.gender_entry = tk.Entry(self.frame)
         self.gender_entry.grid(row=2, column=1)
-        
+
         self.label = tk.Label(self.frame, text="Age:")
         self.label.grid(row=3, column=0)
         self.age_entry = tk.Entry(self.frame)
         self.age_entry.grid(row=3, column=1)
-        
+
         self.label = tk.Label(self.frame, text="Email:")
         self.label.grid(row=4, column=0)
         self.email_entry = tk.Entry(self.frame)
@@ -106,7 +114,7 @@ class StudentInformationSystem:
 
         self.list_students_button = tk.Button(self.frame, text="List Students", command=self.list_students)
         self.list_students_button.grid(row=8, column=1, pady=10)
-        
+
         self.search_student_button = tk.Button(self.frame, text="Search Student", command=self.search_student)
         self.search_student_button.grid(row=9, column=0, pady=10)
 
@@ -114,20 +122,20 @@ class StudentInformationSystem:
         self.label.grid(row=0, column=2)
         self.course_code_entry2 = tk.Entry(self.frame)
         self.course_code_entry2.grid(row=0, column=3)
-        
+
         self.label = tk.Label(self.frame, text="Course:")
         self.label.grid(row=1, column=2)
         self.course_entry = tk.Entry(self.frame)
         self.course_entry.grid(row=1, column=3)
 
         self.add_course_button = tk.Button(self.frame, text="Add Course", command=self.add_course)
-        self.add_course_button.grid(row=2, column=2, padx = 50, pady=10)
+        self.add_course_button.grid(row=2, column=2, padx=50, pady=10)
 
         self.delete_course_button = tk.Button(self.frame, text="Delete Course", command=self.delete_course)
         self.delete_course_button.grid(row=2, column=3, pady=10)
 
         self.edit_course_button = tk.Button(self.frame, text="Edit Course", command=self.edit_course)
-        self.edit_course_button.grid(row=3, column=2, padx = 50, pady=10)
+        self.edit_course_button.grid(row=3, column=2, padx=50, pady=10)
 
         self.list_courses_button = tk.Button(self.frame, text="List Courses", command=self.list_courses)
         self.list_courses_button.grid(row=3, column=3, pady=10)
@@ -135,7 +143,7 @@ class StudentInformationSystem:
     def clear_fields(self):
         self.id_entry.delete(0, "end")
         self.name_entry.delete(0, "end")
-        self.gender_entry.delete(0,"end")
+        self.gender_entry.delete(0, "end")
         self.year_level_entry.delete(0, "end")
         self.course_code_entry.delete(0, "end")
 
@@ -149,7 +157,7 @@ class StudentInformationSystem:
         email = self.email_entry.get()
 
         # Check if the course code exists
-        self.c.execute("SELECT * FROM courses WHERE code = ?", (course_code,))
+        self.c.execute("SELECT * FROM courses WHERE code = %s", (course_code,))
         course = self.c.fetchone()
 
         if course is None:
@@ -162,21 +170,22 @@ class StudentInformationSystem:
             student = Student(id, name, gender, year_level, course_code, age, email)
 
             # Insert the student into the database
-            self.c.execute('INSERT INTO students (id, name, gender, year_level, course_code, age, email) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                           (student.id, student.name, student.gender, student.year_level,
-                            student.course_code, student.age, student.email))
+            self.c.execute('''
+                INSERT INTO students (id, name, gender, year_level, course_code, age, email)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ''', (student.id, student.name, student.gender, student.year_level,
+                  student.course_code, student.age, student.email))
             self.conn.commit()
 
             messagebox.showinfo("Success", "Student added successfully.")
         else:
             messagebox.showwarning("Error", "Please fill in all the fields.")
 
-
     def delete_student(self):
         id = self.id_entry.get()
 
         if id:
-            self.c.execute('DELETE FROM students WHERE id = ?', (id,))
+            self.c.execute("DELETE FROM students WHERE id = %s", (id,))
             if self.c.rowcount > 0:
                 self.conn.commit()
                 messagebox.showinfo("Success", f"Student with ID {id} has been deleted.")
@@ -195,8 +204,8 @@ class StudentInformationSystem:
         if id and new_name and new_gender and new_year_level and new_course_code:
             self.c.execute('''
                 UPDATE students
-                SET name = ?, gender = ?, year_level = ?, course_code = ?
-                WHERE id = ?
+                SET name = %s, gender = %s, year_level = %s, course_code = %s
+                WHERE id = %s
             ''', (new_name, new_gender, new_year_level, new_course_code, id))
             if self.c.rowcount > 0:
                 self.conn.commit()
@@ -207,7 +216,11 @@ class StudentInformationSystem:
             messagebox.showwarning("Error", "Please fill in all fields.")
 
     def list_students(self):
-        self.c.execute('SELECT students.id, students.name, students.gender, students.year_level, students.course_code, courses.course, age, email FROM students LEFT JOIN courses ON students.course_code = courses.code')
+        self.c.execute('''
+            SELECT students.id, students.name, students.gender, students.year_level,
+            students.course_code, courses.course, age, email
+            FROM students LEFT JOIN courses ON students.course_code = courses.code
+        ''')
         students = self.c.fetchall()
         result = "List of Students:\n\n"
         for student in students:
@@ -226,7 +239,12 @@ class StudentInformationSystem:
         keyword = self.id_entry.get()
 
         if keyword:
-            self.c.execute('SELECT students.id, students.name, students.gender, students.year_level, students.course_code, courses.course, age, email FROM students LEFT JOIN courses ON students.course_code = courses.code')
+            self.c.execute('''
+                SELECT students.id, students.name, students.gender, students.year_level,
+                students.course_code, courses.course, age, email
+                FROM students LEFT JOIN courses ON students.course_code = courses.code
+                WHERE students.id = %s
+            ''', (keyword,))
             student = self.c.fetchone()
             if student:
                 result = "Search Results:\n\n"
@@ -252,7 +270,7 @@ class StudentInformationSystem:
             new_course = Course(code, course)
             self.c.execute('''
                 INSERT INTO courses (code, course)
-                VALUES (?, ?)
+                VALUES (%s, %s)
             ''', (code, course))
             self.conn.commit()
             messagebox.showinfo("Success", f"Course {course} with code {code} has been added.")
@@ -263,7 +281,7 @@ class StudentInformationSystem:
         code = self.course_code_entry2.get()
 
         if code:
-            self.c.execute('DELETE FROM courses WHERE code = ?', (code,))
+            self.c.execute("DELETE FROM courses WHERE code = %s", (code,))
             if self.c.rowcount > 0:
                 self.conn.commit()
                 messagebox.showinfo("Success", f"Course with code {code} has been deleted.")
@@ -279,8 +297,8 @@ class StudentInformationSystem:
         if code and new_course:
             self.c.execute('''
                 UPDATE courses
-                SET course = ?
-                WHERE code = ?
+                SET course = %s
+                WHERE code = %s
             ''', (new_course, code))
             if self.c.rowcount > 0:
                 self.conn.commit()
